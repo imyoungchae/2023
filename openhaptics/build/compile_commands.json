@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/son/UR_PHANTOM/ur_project/eugene_ur/build",
+  "command": "/usr/bin/g++    -g   -o CMakeFiles/eugene_ur.dir/main.cpp.o -c /home/son/UR_PHANTOM/ur_project/eugene_ur/main.cpp",
+  "file": "/home/son/UR_PHANTOM/ur_project/eugene_ur/main.cpp"
+}
+]

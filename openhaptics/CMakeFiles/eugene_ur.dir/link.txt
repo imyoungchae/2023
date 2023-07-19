@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/eugene_ur.dir/main.cpp.o  -o eugene_ur  -lHD -lHDU -lpthread 

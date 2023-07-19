@@ -1,0 +1,3 @@
+/home/son/UR_PHANTOM/ur_project/eugene_ur/CMakeFiles/rebuild_cache.dir
+/home/son/UR_PHANTOM/ur_project/eugene_ur/CMakeFiles/edit_cache.dir
+/home/son/UR_PHANTOM/ur_project/eugene_ur/CMakeFiles/eugene_ur.dir
