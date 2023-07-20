@@ -10,7 +10,7 @@
 #include <fstream>
 #include <iomanip>
 #include <HL/hl.h>
-
+#include <stdio.h>
 
 #include <hd.h>
 #include <hdCompilerConfig.h>
@@ -22,7 +22,7 @@
 
 #include <hduError.h>
 #include <hduVector.h>
-#include <hduMatrix.h>
+#include <hduMatrix.h> 
 
 #include "lk_exciter.hpp"
 
@@ -113,84 +113,88 @@ class lk_phantom
 		state->lock_pos = zeros;
     }
 
-    void init_position()
-    {
-        std::cout << "\n" << std::endl;
-		std::cout << "omni initialization" << std::endl;
+	void init_position()
+	{
+		printf("\n\n");
+		printf("omni initialization\n");
 
-        int cnt=0;
+		int cnt=0;
+		for (int i=0; i<3; i++)
+		{
+			clpping_pos[i]=0;
+			clutch_curPos[i]=0;
+		}
 
-        for (int i=0; i<3; i++)
-        {
-            clpping_pos[i]=0;
-            clutch_curPos[i]=0;
-        }
+		while (1)
+		{
+			auto loop_hz=std::chrono::steady_clock::now()+std::chrono::microseconds(500);
 
-        while (1)
-        {
-            auto loop_hz=std::chrono::steady_clock::now()+std::chrono::microseconds(500);
+			read_initFlag();
 
-            read_initFlag();        //아래에 정의해두었음
+			if (init_flag&&slave_init)
+        	{
+            	cnt++;
+            	printf("init_flag and slave_init are both 1, cnt increased: %d\n", cnt); // 이 코드를 추가합니다.
+        	}
 
-            if (init_flag&&slave_init) cnt++;
+			if (cnt>=1000)
+			{
+				//get init position
+				init_pos[0]=state->transform[12];
+				init_pos[1]=state->transform[13];
+				init_pos[2]=state->transform[14];
 
-            if (cnt>=1000)
-            {
-                //get init position
-                init_pos[0]=state->transform[12];       //transform matrix에 집어넣기
-                init_pos[1]=state->transform[13];
-                init_pos[2]=state->transform[14];
+				//get init rotation
+				double temp_ori[3][3]={{0}};
+				temp_ori[0][0]=state->transform[0];
+				temp_ori[0][1]=state->transform[1];
+				temp_ori[0][2]=state->transform[2];
+				temp_ori[1][0]=state->transform[4];
+				temp_ori[1][1]=state->transform[5];
+				temp_ori[1][2]=state->transform[6];
+				temp_ori[2][0]=state->transform[8];
+				temp_ori[2][1]=state->transform[9];
+				temp_ori[2][2]=state->transform[10];
 
-                //get init rotation
-                double temp_ori[3][3]={{0}};
-                temp_ori[0][0]=state->transform[0];     //transform matrix 에 rotation matrix 집어넣기
-                temp_ori[0][1]=state->transform[1];
-                temp_ori[0][2]=state->transform[2];
-                temp_ori[1][0]=state->transform[4];
-                temp_ori[1][1]=state->transform[5];
-                temp_ori[1][2]=state->transform[6];
-                temp_ori[2][0]=state->transform[8];
-                temp_ori[2][1]=state->transform[9];
-                temp_ori[2][2]=state->transform[10];
+				//rotation vector 로 orientation vector 를 얻기 위해 inverse(transpose)
+				for(int i=0; i<3; i++)
+				{
+					for(int j=0; j<3; j++)
+					{
+						init_rot[j][i]=temp_ori[i][j];
+						printf("init_rot[%d][%d]=temp_ori[%d][%d]\n",j,i,i,j);
+					}
+				}
+				
+				printf("init_rot: %.2f, %.2f, %.2f\n", init_rot[0][0], init_rot[0][1], init_rot[0][2]);
+				printf("init_rot: %.2f, %.2f, %.2f\n", init_rot[1][0], init_rot[1][1], init_rot[1][2]);
+				printf("init_rot: %.2f, %.2f, %.2f\n", init_rot[2][0], init_rot[2][1], init_rot[2][2]);
+				printf("=============================\n");
+				printf("temp_ori: %.2f, %.2f, %.2f\n", temp_ori[0][0], temp_ori[0][1], temp_ori[0][2]);
+				printf("temp_ori: %.2f, %.2f, %.2f\n", temp_ori[1][0], temp_ori[1][1], temp_ori[1][2]);
+				printf("temp_ori: %.2f, %.2f, %.2f\n", temp_ori[2][0], temp_ori[2][1], temp_ori[2][2]);
 
-                //rotation vector 로 orientation vector 를 얻기 위해 inverse(transpose)
-                for(int i=0; i<3; i++)
-                {
-                    for(int j=0; j<3; j++)
-                    {
-                        init_rot[j][i]=temp_ori[i][j];
-						std::cout << "init_rot[" << j << "][" << i << "]=temp_ori[" << i << "][" << j << "]" << std::endl;
+				break;
+			}
 
-                    }
-                }
-						std::cout << "init_rot: " << std::fixed << std::setprecision(2) << init_rot[0][0] << "\t, " << init_rot[0][1] << "\t, " << init_rot[0][2] << std::endl;
-						std::cout << "init_rot: " << std::fixed << std::setprecision(2) << init_rot[1][0] << "\t, " << init_rot[1][1] << "\t, " << init_rot[1][2] << std::endl;
-						std::cout << "init_rot: " << std::fixed << std::setprecision(2) << init_rot[2][0] << "\t, " << init_rot[2][1] << "\t, " << init_rot[2][2] << std::endl;
-						std::cout << "=============================" << std::endl;
-						std::cout << "temp_ori: " << std::fixed << std::setprecision(2) << temp_ori[0][0] << "\t, " << temp_ori[0][1] << "\t, " << temp_ori[0][2] << std::endl;
-						std::cout << "temp_ori: " << std::fixed << std::setprecision(2) << temp_ori[1][0] << "\t, " << temp_ori[1][1] << "\t, " << temp_ori[1][2] << std::endl;
-						std::cout << "temp_ori: " << std::fixed << std::setprecision(2) << temp_ori[2][0] << "\t, " << temp_ori[2][1] << "\t, " << temp_ori[2][2] << std::endl;
+			std::this_thread::sleep_until(loop_hz);
+		}
 
-                break;
-            }
+		printf("init clear!\n");
+	}
+	void read_initFlag()
+	{
+		// 동시에 버튼 1과 버튼 2가 눌렀을 때 init_flag와 slave_init을 1로 변경
+		if (state->buttons[1] == 1 && state->buttons[2] == 1)
+		{
+			init_flag = 1;
+			slave_init = 1;
 
-            std::this_thread::sleep_until(loop_hz);
-        }
-
-        std::cout << "init clear!" << std::endl;
-    }
-
-    void read_initFlag()
-    {
-        //init flag
-        //flag : 컴퓨터에서 무언가를 기억하거나 또는 다른 프로그램에게 약속된 신호를 남기기 위한 용도로 프로그램에 사용되는 미리 정의된 비트
-        if (state->buttons[1] == 0 && pre_button_1 == 1) {init_flag = !init_flag; pre_button_1 = 0;}        //button 누르면 초기화
-		if (state->buttons[1] == 1) {pre_button_1 = 1;}
-
-        // clutch flag
+		}
+		//printf("init_flag: %d, slave_init: %d\n", init_flag, slave_init);
 		clutch_strState = state->buttons[0];
-    }
-    
+	}
+	
     void get_position()
     {
         pre_pos[0]=state->transform[12];        //transform matrix 의 position vector 자리에다가 집어넣기
@@ -337,6 +341,7 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 	hdGetIntegerv(HD_CURRENT_BUTTONS, &nButtons);
 	omni_state->buttons[0]	= (nButtons & HD_DEVICE_BUTTON_1) ? 1 : 0;
 	omni_state->buttons[1]	= (nButtons & HD_DEVICE_BUTTON_2) ? 1 : 0;
+	omni_state->buttons[2] = ((nButtons & (HD_DEVICE_BUTTON_1 | HD_DEVICE_BUTTON_2)) == (HD_DEVICE_BUTTON_1 | HD_DEVICE_BUTTON_2)) ? 1 : 0;
 
 	hdEndFrame(hdGetCurrentDevice());
 
@@ -413,7 +418,7 @@ HDCallbackCode HDCALLBACK RenderWallOperation (void* pUserData)
 
     hdBeginFrame (hhd); 
         hdGetDoublev (HD_CURRENT_POSITION, position);
-        if (position[0] < 0) // 힘 방향 바꾸기
+        if (position[0] > 0) // 힘 방향 바꾸기
  			force[0] = -k * position[0];  
         hdSetDoublev (HD_CURRENT_FORCE, force);	// Cartesian 좌표 계산0
     hdEndFrame (hhd);
@@ -424,36 +429,38 @@ int main(int argc, char** argv)
 {
 	HDErrorInfo error;
 	HHD hHD;
-	hHD=hdInitDevice(HD_DEFAULT_DEVICE);
-
+	hHD=hdInitDevice(HD_DEFAULT_DEVICE); // 디바이스 초기화
 	if(HD_DEVICE_ERROR(error=hdGetError()))
 	{
 		std::cout<<"Failed to initialize haptic device"<<'n';
 		return -1;
 	}
-
 	if (HD_DEVICE_ERROR(error = hdGetError())) {
 		std::cout << "Failed to start the scheduler" << '\n';
 		return -1;
-	}  
+	}
 	HHD_Auto_Calibration();
-
 	OmniState	state;
 	lk_phantom	omni;
 	omni.init(&state);
-	//hdScheduleAsynchronous(omni_state_callback, &state, HD_MAX_SCHEDULER_PRIORITY);
-    hdStartScheduler(); // hdScheduleSynchronous()함수를 사용할 것이기 때문에 `hdStartScheduler()`를 호출합니다.
-	hdEnable(HD_FORCE_OUTPUT); 
+	hdEnable(HD_FORCE_OUTPUT); // 디바이스 힘 출력 활성화
+	hdStartScheduler(); // hdScheduleSynchronous()함수를 사용할 것이기 때문에 `hdStartScheduler()`를 호출합니다.
+	hdScheduleAsynchronous(omni_state_callback, &state, HD_MAX_SCHEDULER_PRIORITY);
+	//hdScheduleAsynchronous(RenderWallOperation, NULL, HD_MAX_SCHEDULER_PRIORITY);
+	omni.init_position();
+    while (true) 
+    {
 
-	hdScheduleAsynchronous(RenderWallOperation, NULL, HD_MAX_SCHEDULER_PRIORITY);
-
-	while (1){
-		omni.get_position();
-		omni.get_rotation();
-		omni.clutch_process();
-		//printf("slave_x:%lf\t y:%lf\t z:%lf\t rx:%lf\t ry:%lf\t rz:%lf\n", omni.dev_info[0], omni.dev_info[1], omni.dev_info[2], omni.dev_info[3], omni.dev_info[4], omni.dev_info[5]);
-		}
-	hdStopScheduler();
-	hdDisableDevice(hHD);
+        omni.get_position();
+        omni.get_rotation(); 
+        printf("omni now x:%lf\t y:%lf\t z:%lf\t rx:%lf\t ry:%lf\t rz:%lf\n", omni.dev_info[0], omni.dev_info[1], omni.dev_info[2], omni.dev_info[3], omni.dev_info[4], omni.dev_info[5]);
+        omni.read_initFlag(); 
+        omni.clutch_process();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+	//printf("omni now x:%lf\t y:%lf\t z:%lf\t rx:%lf\t ry:%lf\t rz:%lf\n", omni.dev_info[0], omni.dev_info[1], omni.dev_info[2], omni.dev_info[3], omni.dev_info[4], omni.dev_info[5]);
+	omni.read_initFlag();
+	hdStopScheduler(); // 스케줄러 종료
+	hdDisableDevice(hHD); // 디바이스 종료
 	return 0;
 }
