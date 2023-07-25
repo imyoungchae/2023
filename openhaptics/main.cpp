@@ -5,7 +5,7 @@
 #include <sstream>
 #include <pthread.h>
 #include <thread>
-#include <chrono>       //함수의 성능을 측정
+#include <chrono> 
 #include <mutex>
 #include <fstream>
 #include <iomanip>
@@ -245,7 +245,6 @@ class lk_phantom
 		temp_ori[2][1]	= state->transform[9];
 		temp_ori[2][2]	= state->transform[10];
 
-		
         // multiple frame init & current
 		for (int i = 0; i < 3; i++)
         {
@@ -320,6 +319,10 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 {
 	hduMatrix omni_matrix;
 	double rot_matrix[3][3];
+    HHD hhd = hdGetCurrentDevice ();
+    double position[3]; 
+    double force[] = {0.0, 0.0, 0.0};
+    double k = 0.5; // 스프링 상수
 
 	OmniState *omni_state = static_cast<OmniState *>(pUserData);
 	if (hdCheckCalibration() == HD_CALIBRATION_NEEDS_UPDATE)
@@ -335,7 +338,10 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
 	hdGetDoublev(HD_CURRENT_JOINT_ANGLES, omni_state->joints);
 	hdGetDoublev(HD_CURRENT_FORCE, omni_state->force);
 	hdGetDoublev(HD_CURRENT_TRANSFORM, omni_state->transform);
-
+		hdGetDoublev (HD_CURRENT_POSITION, position);
+	    if (position[0] > 0) // 힘 방향 바꾸기
+ 			force[0] = -k * position[0];  
+        hdSetDoublev (HD_CURRENT_FORCE, force);	// Cartesian 좌표 계산0
 	// get button state
 	int nButtons	= 0;
 	hdGetIntegerv(HD_CURRENT_BUTTONS, &nButtons);
@@ -425,6 +431,18 @@ HDCallbackCode HDCALLBACK RenderWallOperation (void* pUserData)
     return HD_CALLBACK_CONTINUE;
 }
 
+HDCallbackCode HDCALLBACK GravityWellSelection (void* pUserData)
+{
+    HHD hhd = hdGetCurrentDevice ();
+	hduVector3Dd position;
+	hdGetDoublev (HD_CURRENT_POSITION, position);
+
+	hduVector3Dd gravityWellCenter (0, 0, 0);
+	const float k = 2.0;
+	hduVector3Dd forceVector = (gravityWellCenter-position)*k;
+    return HD_CALLBACK_CONTINUE;
+}
+
 int main(int argc, char** argv)
 {
 	HDErrorInfo error;
@@ -444,13 +462,13 @@ int main(int argc, char** argv)
 	lk_phantom	omni;
 	omni.init(&state);
 	hdEnable(HD_FORCE_OUTPUT); // 디바이스 힘 출력 활성화
-	hdStartScheduler(); // hdScheduleSynchronous()함수를 사용할 것이기 때문에 `hdStartScheduler()`를 호출합니다.
+	hdStartScheduler();
+	//hdScheduleAsynchronous(GravityWellSelection,NULL, HD_MAX_SCHEDULER_PRIORITY);
 	hdScheduleAsynchronous(omni_state_callback, &state, HD_MAX_SCHEDULER_PRIORITY);
 	//hdScheduleAsynchronous(RenderWallOperation, NULL, HD_MAX_SCHEDULER_PRIORITY);
 	omni.init_position();
     while (true) 
     {
-
         omni.get_position();
         omni.get_rotation(); 
         printf("omni now x:%lf\t y:%lf\t z:%lf\t rx:%lf\t ry:%lf\t rz:%lf\n", omni.dev_info[0], omni.dev_info[1], omni.dev_info[2], omni.dev_info[3], omni.dev_info[4], omni.dev_info[5]);
@@ -458,7 +476,6 @@ int main(int argc, char** argv)
         omni.clutch_process();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-	//printf("omni now x:%lf\t y:%lf\t z:%lf\t rx:%lf\t ry:%lf\t rz:%lf\n", omni.dev_info[0], omni.dev_info[1], omni.dev_info[2], omni.dev_info[3], omni.dev_info[4], omni.dev_info[5]);
 	omni.read_initFlag();
 	hdStopScheduler(); // 스케줄러 종료
 	hdDisableDevice(hHD); // 디바이스 종료
