@@ -57,7 +57,7 @@ gym = gymapi.acquire_gym()
 custom_parameters = [
     {"name": "--controller", "type": str, "default": "ik",
      "help": "Controller to use for ur5. Options are {ik, osc}"},
-    {"name": "--num_envs", "type": int, "default": 5, "help": "Number of environments to create"},
+    {"name": "--num_envs", "type": int, "default": 50, "help": "Number of environments to create"},
 ]
 args = gymutil.parse_arguments(
     description="ur5 Jacobian Inverse Kinematics (IK) + Operational Space Control (OSC) Example",
@@ -329,15 +329,19 @@ while not gym.query_viewer_has_closed(viewer):
 
     box_pos = rb_states[box_idxs, :3]
     box_rot = rb_states[box_idxs, 3:7]
-    print("box pos:",box_pos)
+    
     hand_pos = rb_states[hand_idxs, :3]
+    #print("hand_pos[0]:",hand_pos[:,0],", box_pos[0]:",box_pos[:,0])
+    #print("hand_pos[1]:",hand_pos[:,1],", box_pos[1]:",box_pos[:,1])
+    #print("hand_pos[2]:",hand_pos[:,2],", box_pos[2]:",box_pos[:,2])
     hand_rot = rb_states[hand_idxs, 3:7]
+
     hand_vel = rb_states[hand_idxs, 7:]
-    print("hand pos:",hand_pos)
+
     to_box = box_pos - hand_pos
     to2_box=hand_pos[:,2]-box_pos[:,2]
-    print("2_box",to2_box)
-    print("----------------------")
+
+    print("----------------------------------------------")
     box_dist = torch.norm(to_box, dim=-1).unsqueeze(-1)
     box_dist=box_dist
     box_dir = to_box / box_dist
@@ -348,8 +352,10 @@ while not gym.query_viewer_has_closed(viewer):
 
     # determine if we're holding the box (grippers are closed and box is near)
     gripper_sep = dof_pos[:, 8] + dof_pos[:, 9] 
-    gripped = (gripper_sep < 0.5) & (box_dist < grasp_offset + 0.5*box_size)
-
+    gripped = (gripper_sep < 0.5) & (box_dist < grasp_offset + 1.88*box_size)
+    print("box_dist=",box_dist," grasp_offset +1.88*box_size=",grasp_offset + 1.88*box_size)
+    print("gripped sep=",gripper_sep)
+    print("Gripped:",gripped)
     yaw_q = cube_grasping_yaw(box_rot, corners)
 
     box_yaw_dir = quat_axis(yaw_q, 0)
@@ -361,10 +367,7 @@ while not gym.query_viewer_has_closed(viewer):
     to_init = init_pos - hand_pos
     init_dist = torch.norm(to_init, dim=-1)
     
-    fpose=torch.Tensor([0.2,0.2,0.8]).to(device)
-    fori=torch.Tensor([0.5,0,0.0,0.0]).to(device)
-
-    hand_restart = (hand_restart & (init_dist > 0.1)).squeeze(-1)
+    hand_restart = (hand_restart & (init_dist > 0.02)).squeeze(-1)
  
     return_to_start = (hand_restart | gripped.squeeze(-1)).unsqueeze(-1)
 
@@ -373,8 +376,10 @@ while not gym.query_viewer_has_closed(viewer):
     above_box = ((box_dot >= 0.99) & (yaw_dot >= 0.95) & (box_dist < grasp_offset*3 )).squeeze(-1)
     grasp_pos = box_pos.clone()
 
-
     grasp_pos[:, 2] = torch.where(above_box, box_pos[:, 2]+ grasp_offset*0.8, box_pos[:, 2] + grasp_offset * 2.1)
+
+    fpose=torch.Tensor([0.2,0.2,1.1]).to(device)
+    fori=torch.Tensor([0.6623,  0.2477, -0.6636,  0.2444]).to(device)
 
     # compute goal position and orientation
     goal_pos = torch.where(return_to_start, fpose, grasp_pos)
@@ -407,3 +412,5 @@ while not gym.query_viewer_has_closed(viewer):
 gym.destroy_viewer(viewer)
 gym.destroy_sim(sim)
   
+
+
