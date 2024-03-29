@@ -279,7 +279,7 @@
     <joint name="l_finger_2_joint" type="revolute">
     	<parent link="l_moment_arm_link"/>
     	<child link="l_finger_link"/>
-    	<origin rpy="0 0 0" xyz="0.049 0.026 0.000"/>
+    	<origin rpy="0 0 0" xyz="0.049 0.026 0.0"/>
     	<axis xyz="0 0 1"/>
     	<limit effort="10.6" lower="-3.14159" upper="3.14159" velocity="3.14"/>
 	<mimic joint="gripper_joint" multiplier="-1"/>
@@ -336,10 +336,23 @@
       		<inertia ixx="0.000023" ixy="-0.000019" ixz="0.000000" iyy="0.000072" iyz="0.000000" izz="0.000083"/>
     	</inertial>
     </link>
+    <joint name="ur10_grip_vis_joint" type="fixed">
+     <parent link="ee_link"/>
+     <child link="ur_grip_site"/>
+     <origin rpy="0 0 0" xyz="0 0 0.1625"/>
+    </joint>
+    <link name="ur_grip_site">
+    <visual>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+      <material name="Vis"/>
+    </visual>
+  </link>
     <joint name="r_finger_2_joint" type="revolute">
     	<parent link="r_moment_arm_link"/>
     	<child link="r_finger_link"/>
-    	<origin rpy="0 0 0" xyz="0.049 -0.026 0.000"/>
+    	<origin rpy="0 0 0" xyz="0.049 -0.026 0.0"/>
     	<axis xyz="0 0 1"/>
     	<limit effort="10.6" lower="-3.14159" upper="3.14159" velocity="3.14"/>
 	<mimic joint="gripper_joint" multiplier="1"/>
@@ -366,5 +379,31 @@
       		<inertia ixx="0.000006" ixy="0.000005" ixz="0.000000" iyy="0.000025" iyz="0.000000" izz="0.000026"/>
     	</inertial>
     </link>
-    
+
+    <joint name="ur10_leftfinger_tip_joint" type="fixed">
+        <parent link="l_finger_link"/>
+        <child link="ur10_leftfinger_tip"/>
+        <origin rpy="0 0 0" xyz="0.035 -0.01 -0.015"/>
+    </joint>
+    <link name="ur10_leftfinger_tip">
+        <collision>
+        <geometry>
+            <box size="0.013 0.004 0.0"/>
+        </geometry>
+        </collision>
+    </link>
+    <joint name="ur10_rightfinger_tip_joint" type="fixed">
+        <parent link="r_finger_link"/>
+        <child link="ur10_rightfinger_tip"/>
+        <origin rpy="0 0 0" xyz="0.035 0.01 -0.015"/>
+    </joint>
+    <link name="ur10_rightfinger_tip">
+        <collision>
+        <geometry>
+            <box size="0.013 0.004 0.0"/>
+        </geometry>
+        </collision>
+    </link>
 </robot>
+
+
